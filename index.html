@@ -3,176 +3,424 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Electric Circuit Virtual Lab</title>
+  <title>Advanced Electrical & Electronics Virtual Lab</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #0f172a; color: #f8fafc; font-family: sans-serif; }
-    canvas { background: #1e293b; border-radius: 12px; max-width: 100%; height: auto; }
+    body { background-color: #0b0f19; color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+    canvas { background: #111827; border-radius: 12px; cursor: crosshair; }
+    .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
 </head>
-<body class="p-4 sm:p-6">
-  <div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl sm:text-3xl font-bold text-cyan-400 mb-2 text-center">Interactive Electric Circuit Simulator</h1>
-    <p class="text-slate-400 text-center mb-6 text-sm sm:text-base">Real-time Ohm's Law & Circuit Simulation</p>
+<body class="h-screen flex flex-col overflow-hidden">
 
-    <div class="bg-slate-800 p-4 rounded-xl mb-4 flex justify-between items-center flex-wrap gap-4 shadow-lg">
-      <div class="w-full sm:w-auto flex-1">
-        <label class="text-sm font-medium text-slate-300">Voltage (V): <span id="vVal" class="text-yellow-400 font-bold">9V</span></label>
-        <input type="range" id="voltage" min="1" max="24" value="9" class="w-full accent-cyan-400">
+  <!-- TOP HEADER -->
+  <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex justify-between items-center shadow-lg z-10">
+    <div class="flex items-center space-x-3">
+      <div class="p-2 bg-cyan-500/20 text-cyan-400 rounded-lg">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
       </div>
-      <div class="w-full sm:w-auto flex-1">
-        <label class="text-sm font-medium text-slate-300">Resistance (Ω): <span id="rVal" class="text-cyan-400 font-bold">10Ω</span></label>
-        <input type="range" id="resistance" min="1" max="100" value="10" class="w-full accent-cyan-400">
-      </div>
-      <div class="w-full sm:w-auto text-center">
-        <button id="toggleSwitch" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-bold transition shadow-md">Switch: ON</button>
+      <div>
+        <h1 class="text-lg font-bold text-slate-100 tracking-wide">Nexus Electrical Lab v2.0</h1>
+        <p class="text-xs text-slate-400">Interactive Circuit Simulation & Physics Engine</p>
       </div>
     </div>
-
-    <div class="relative flex justify-center bg-slate-900 p-2 rounded-2xl border border-slate-700 shadow-2xl overflow-hidden">
-      <canvas id="circuitCanvas" width="700" height="400"></canvas>
+    <div class="flex items-center space-x-3">
+      <button onclick="loadPreset('ohms')" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 rounded-md font-semibold transition">Ohm's Law</button>
+      <button onclick="loadPreset('parallel')" class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-slate-700 rounded-md font-semibold transition">Parallel Load</button>
+      <button onclick="clearCanvas()" class="px-3 py-1.5 text-xs bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 border border-rose-500/30 rounded-md font-semibold transition">Clear All</button>
     </div>
+  </header>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4 text-center">
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-        <div class="text-slate-400 text-xs font-semibold tracking-wider">CURRENT (I)</div>
-        <div id="iDisplay" class="text-2xl font-extrabold text-emerald-400 mt-1">0.90 A</div>
+  <!-- MAIN WORKSPACE -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- LEFT COMPONENT PALETTE -->
+    <aside class="w-64 bg-slate-900/80 border-r border-slate-800 p-4 flex flex-col space-y-4 overflow-y-auto scrollbar-thin">
+      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Components</h2>
+
+      <div class="space-y-2">
+        <div onclick="addComponent('battery')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition group">
+          <span class="text-sm font-medium text-slate-200">DC Voltage Source</span>
+          <span class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">9V</span>
+        </div>
+
+        <div onclick="addComponent('resistor')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition">
+          <span class="text-sm font-medium text-slate-200">Resistor</span>
+          <span class="text-xs font-bold text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded">100 Ω</span>
+        </div>
+
+        <div onclick="addComponent('switch')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition">
+          <span class="text-sm font-medium text-slate-200">Toggle Switch</span>
+          <span class="text-xs font-bold text-slate-400 bg-slate-500/10 px-2 py-0.5 rounded">SPST</span>
+        </div>
+
+        <div onclick="addComponent('bulb')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition">
+          <span class="text-sm font-medium text-slate-200">Light Bulb</span>
+          <span class="text-xs font-bold text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded">Load</span>
+        </div>
+
+        <div onclick="addComponent('led')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition">
+          <span class="text-sm font-medium text-slate-200">Diode LED</span>
+          <span class="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Diode</span>
+        </div>
       </div>
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-        <div class="text-slate-400 text-xs font-semibold tracking-wider">POWER (P)</div>
-        <div id="pDisplay" class="text-2xl font-extrabold text-yellow-400 mt-1">8.10 W</div>
+
+      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider pt-4">Instruments</h2>
+      <div class="space-y-2">
+        <div onclick="addComponent('voltmeter')" class="p-3 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-xl cursor-pointer flex items-center justify-between transition">
+          <span class="text-sm font-medium text-slate-200">Voltmeter</span>
+          <span class="text-xs font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded">Meter</span>
+        </div>
       </div>
-      <div class="bg-slate-800 p-4 rounded-xl border border-slate-700 shadow">
-        <div class="text-slate-400 text-xs font-semibold tracking-wider">BULB STATE</div>
-        <div id="bDisplay" class="text-2xl font-extrabold text-cyan-400 mt-1">Glowing</div>
+
+      <div class="p-3 bg-slate-950/50 rounded-xl border border-slate-800/80 mt-auto">
+        <p class="text-xs text-slate-400 leading-relaxed">
+          💡 <strong class="text-slate-300">Guide:</strong> Terminals (dots) par click-and-drag karke wires connect karein. Switch par click karke ON/OFF karein.
+        </p>
       </div>
-    </div>
+    </aside>
+
+    <!-- CENTER CANVAS WORKBENCH -->
+    <main class="flex-1 relative bg-slate-950 p-4 flex justify-center items-center overflow-hidden">
+      <canvas id="circuitCanvas" width="900" height="600" class="shadow-2xl border border-slate-800"></canvas>
+    </main>
+
+    <!-- RIGHT ANALYTICS & INSPECTOR PANEL -->
+    <aside class="w-80 bg-slate-900/80 border-l border-slate-800 p-4 flex flex-col space-y-4 overflow-y-auto scrollbar-thin">
+      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Circuit Metrics</h2>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Total Voltage</div>
+          <div id="metricV" class="text-xl font-black text-yellow-400 mt-1">0.00 V</div>
+        </div>
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Current (I)</div>
+          <div id="metricI" class="text-xl font-black text-emerald-400 mt-1">0.00 A</div>
+        </div>
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Power (P)</div>
+          <div id="metricP" class="text-xl font-black text-cyan-400 mt-1">0.00 W</div>
+        </div>
+        <div class="p-3 bg-slate-800/80 rounded-xl border border-slate-700">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Eq. Resistance</div>
+          <div id="metricR" class="text-xl font-black text-purple-400 mt-1">0.00 Ω</div>
+        </div>
+      </div>
+
+      <!-- PROPERTIES EDITOR -->
+      <div id="inspector" class="p-4 bg-slate-800/60 rounded-xl border border-slate-700 space-y-3">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Component Inspector</h3>
+        <p id="noSelectionText" class="text-xs text-slate-500">Component par click karke uski properties edit karein.</p>
+        
+        <div id="editorControls" class="hidden space-y-3">
+          <div>
+            <label class="text-xs text-slate-400 block mb-1">Value / Parameter</label>
+            <input type="range" id="paramSlider" min="1" max="100" class="w-full accent-cyan-400">
+            <div class="flex justify-between text-xs font-bold text-cyan-400 mt-1">
+              <span id="paramLabel">Value</span>
+              <span id="paramVal">10</span>
+            </div>
+          </div>
+          <button id="deleteComponentBtn" class="w-full py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 text-xs font-bold rounded-lg border border-rose-500/30 transition">
+            Delete Component
+          </button>
+        </div>
+      </div>
+
+      <!-- LIVE OSCILLOSCOPE GRAPH -->
+      <div class="p-4 bg-slate-800/60 rounded-xl border border-slate-700 space-y-2 flex-1 flex flex-col">
+        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex justify-between">
+          <span>Live Oscilloscope</span>
+          <span class="text-emerald-400 text-[10px]">REAL-TIME</span>
+        </h3>
+        <div class="flex-1 bg-slate-950 rounded-lg border border-slate-800 relative overflow-hidden flex items-center">
+          <canvas id="scopeCanvas" width="280" height="120" class="w-full h-full"></canvas>
+        </div>
+      </div>
+    </aside>
+
   </div>
 
   <script>
     const canvas = document.getElementById('circuitCanvas');
     const ctx = canvas.getContext('2d');
+    const scopeCanvas = document.getElementById('scopeCanvas');
+    const scopeCtx = scopeCanvas.getContext('2d');
 
-    let voltage = 9;
-    let resistance = 10;
-    let switchOn = true;
+    let components = [];
+    let wires = [];
+    let selectedComponent = null;
+    let draggingComponent = null;
+    let dragOffset = { x: 0, y: 0 };
+    let wireStartTerminal = null;
+    let mousePos = { x: 0, y: 0 };
     let particleOffset = 0;
+    let scopeHistory = new Array(60).fill(0);
 
-    document.getElementById('voltage').addEventListener('input', (e) => {
-      voltage = parseFloat(e.target.value);
-      document.getElementById('vVal').innerText = voltage + 'V';
-      updateMetrics();
-    });
+    class Component {
+      constructor(type, x, y) {
+        this.id = Math.random().toString(36).substr(2, 9);
+        this.type = type;
+        this.x = x;
+        this.y = y;
+        this.width = 80;
+        this.height = 40;
+        this.value = type === 'battery' ? 12 : (type === 'resistor' ? 20 : 0);
+        this.state = type === 'switch' ? false : true; // Switch state OFF initially
+        this.t1 = { x: this.x - 40, y: this.y };
+        this.t2 = { x: this.x + 40, y: this.y };
+      }
 
-    document.getElementById('resistance').addEventListener('input', (e) => {
-      resistance = parseFloat(e.target.value);
-      document.getElementById('rVal').innerText = resistance + 'Ω';
-      updateMetrics();
-    });
-
-    document.getElementById('toggleSwitch').addEventListener('click', () => {
-      switchOn = !switchOn;
-      const btn = document.getElementById('toggleSwitch');
-      btn.innerText = switchOn ? "Switch: ON" : "Switch: OFF";
-      btn.className = switchOn 
-        ? "w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-lg font-bold transition shadow-md" 
-        : "w-full sm:w-auto bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-lg font-bold transition shadow-md";
-      updateMetrics();
-    });
-
-    function updateMetrics() {
-      const current = switchOn ? (voltage / resistance) : 0;
-      const power = switchOn ? (voltage * current) : 0;
-      document.getElementById('iDisplay').innerText = current.toFixed(2) + ' A';
-      document.getElementById('pDisplay').innerText = power.toFixed(2) + ' W';
-      document.getElementById('bDisplay').innerText = switchOn ? "Glowing" : "OFF";
+      updateTerminals() {
+        this.t1 = { x: this.x - 40, y: this.y };
+        this.t2 = { x: this.x + 40, y: this.y };
+      }
     }
 
-    function draw() {
+    function addComponent(type) {
+      const comp = new Component(type, 300 + Math.random() * 100, 200 + Math.random() * 100);
+      components.push(comp);
+      selectComp(comp);
+    }
+
+    function selectComp(comp) {
+      selectedComponent = comp;
+      const editor = document.getElementById('editorControls');
+      const noSel = document.getElementById('noSelectionText');
+      
+      if (comp && (comp.type === 'battery' || comp.type === 'resistor')) {
+        editor.classList.remove('hidden');
+        noSel.classList.add('hidden');
+        const slider = document.getElementById('paramSlider');
+        slider.min = comp.type === 'battery' ? 1 : 1;
+        slider.max = comp.type === 'battery' ? 48 : 200;
+        slider.value = comp.value;
+        document.getElementById('paramLabel').innerText = comp.type === 'battery' ? 'Voltage (V)' : 'Resistance (Ω)';
+        document.getElementById('paramVal').innerText = comp.value + (comp.type === 'battery' ? 'V' : 'Ω');
+      } else {
+        editor.classList.add('hidden');
+        noSel.classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('paramSlider').addEventListener('input', (e) => {
+      if (selectedComponent) {
+        selectedComponent.value = parseFloat(e.target.value);
+        document.getElementById('paramVal').innerText = selectedComponent.value + (selectedComponent.type === 'battery' ? 'V' : 'Ω');
+      }
+    });
+
+    document.getElementById('deleteComponentBtn').addEventListener('click', () => {
+      if (selectedComponent) {
+        components = components.filter(c => c !== selectedComponent);
+        wires = wires.filter(w => w.from.comp !== selectedComponent && w.to.comp !== selectedComponent);
+        selectComp(null);
+      }
+    });
+
+    // MOUSE EVENT LISTENERS
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      // Check Terminals for Wire Connection
+      for (let c of components) {
+        if (Math.hypot(c.t1.x - mx, c.t1.y - my) < 12) { wireStartTerminal = { comp: c, term: 't1', pos: c.t1 }; return; }
+        if (Math.hypot(c.t2.x - mx, c.t2.y - my) < 12) { wireStartTerminal = { comp: c, term: 't2', pos: c.t2 }; return; }
+      }
+
+      // Check Components Click / Drag
+      for (let c of components) {
+        if (mx >= c.x - 40 && mx <= c.x + 40 && my >= c.y - 20 && my <= c.y + 20) {
+          if (c.type === 'switch') c.state = !c.state;
+          draggingComponent = c;
+          dragOffset = { x: mx - c.x, y: my - c.y };
+          selectComp(c);
+          return;
+        }
+      }
+      selectComp(null);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+
+      if (draggingComponent) {
+        draggingComponent.x = mousePos.x - dragOffset.x;
+        draggingComponent.y = mousePos.y - dragOffset.y;
+        draggingComponent.updateTerminals();
+      }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+      if (wireStartTerminal) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+
+        for (let c of components) {
+          if (c === wireStartTerminal.comp) continue;
+          if (Math.hypot(c.t1.x - mx, c.t1.y - my) < 15) {
+            wires.push({ from: wireStartTerminal, to: { comp: c, term: 't1', pos: c.t1 } });
+            break;
+          }
+          if (Math.hypot(c.t2.x - mx, c.t2.y - my) < 15) {
+            wires.push({ from: wireStartTerminal, to: { comp: c, term: 't2', pos: c.t2 } });
+            break;
+          }
+        }
+      }
+      wireStartTerminal = null;
+      draggingComponent = null;
+    });
+
+    function calculatePhysics() {
+      const battery = components.find(c => c.type === 'battery');
+      const resistors = components.filter(c => c.type === 'resistor' || c.type === 'bulb' || c.type === 'led');
+      const switches = components.filter(c => c.type === 'switch');
+
+      const isClosed = switches.every(s => s.state) && wires.length >= components.length && battery;
+
+      let totalV = (battery && isClosed) ? battery.value : 0;
+      let totalR = resistors.reduce((sum, r) => sum + (r.type === 'resistor' ? r.value : 10), 0);
+      if (totalR === 0) totalR = 1;
+
+      let current = isClosed ? (totalV / totalR) : 0;
+      let power = totalV * current;
+
+      document.getElementById('metricV').innerText = totalV.toFixed(1) + ' V';
+      document.getElementById('metricI').innerText = current.toFixed(2) + ' A';
+      document.getElementById('metricP').innerText = power.toFixed(1) + ' W';
+      document.getElementById('metricR').innerText = (isClosed ? totalR : 0).toFixed(1) + ' Ω';
+
+      return { current, voltage: totalV };
+    }
+
+    function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const { current, voltage } = calculatePhysics();
 
-      // Wire Loop
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 6;
-      ctx.strokeRect(100, 80, 500, 240);
-
-      // Battery (Left Side)
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(80, 160, 40, 80);
-      ctx.fillStyle = "#ef4444";
-      ctx.fillRect(90, 165, 20, 30);
-      ctx.fillStyle = "#3b82f6";
-      ctx.fillRect(90, 205, 20, 30);
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 14px sans-serif";
-      ctx.fillText("+", 95, 185);
-      ctx.fillText("-", 96, 225);
-
-      // Switch (Top Side)
-      ctx.fillStyle = "#1e293b";
-      ctx.fillRect(320, 70, 60, 20);
-      ctx.strokeStyle = switchOn ? "#10b981" : "#f43f5e";
+      // Render Wires
       ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(330, 80);
-      ctx.lineTo(switchOn ? 370 : 365, switchOn ? 80 : 65);
-      ctx.stroke();
+      ctx.strokeStyle = "#475569";
+      for (let w of wires) {
+        const p1 = w.from.comp[w.from.term];
+        const p2 = w.to.comp[w.to.term];
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
 
-      // Bulb (Right Side)
-      const current = switchOn ? (voltage / resistance) : 0;
-      const glow = Math.min(1, current / 2);
-      ctx.beginPath();
-      ctx.arc(600, 200, 25, 0, Math.PI * 2);
-      ctx.fillStyle = switchOn ? `rgba(253, 224, 71, ${0.3 + glow * 0.7})` : "#334155";
-      ctx.fill();
-      ctx.strokeStyle = switchOn ? "#fde047" : "#64748b";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Filament
-      ctx.beginPath();
-      ctx.moveTo(590, 210);
-      ctx.lineTo(600, 190);
-      ctx.lineTo(610, 210);
-      ctx.strokeStyle = switchOn ? "#ffffff" : "#94a3b8";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Electron Flow Animation
-      if (switchOn && current > 0) {
-        particleOffset = (particleOffset + current * 2) % 20;
-        ctx.fillStyle = "#38bdf8";
-        
-        const pts = [
-          ...getPath(100, 80, 600, 80),   // Top
-          ...getPath(600, 80, 600, 320),  // Right
-          ...getPath(600, 320, 100, 320), // Bottom
-          ...getPath(100, 320, 100, 80)   // Left
-        ];
-
-        pts.forEach((p, idx) => {
-          if ((idx * 20 + particleOffset) % 30 < 15) {
+        // Electron Flow
+        if (current > 0) {
+          particleOffset = (particleOffset + current * 0.5) % 15;
+          ctx.fillStyle = "#38bdf8";
+          const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+          const steps = Math.floor(dist / 20);
+          for (let i = 0; i < steps; i++) {
+            const t = (i / steps + particleOffset / 100) % 1;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+            ctx.arc(p1.x + (p2.x - p1.x) * t, p1.y + (p2.y - p1.y) * t, 3, 0, Math.PI * 2);
             ctx.fill();
           }
-        });
+        }
       }
 
-      requestAnimationFrame(draw);
-    }
-
-    function getPath(x1, y1, x2, y2) {
-      const pts = [];
-      const steps = 15;
-      for (let i = 0; i <= steps; i++) {
-        pts.push({ x: x1 + (x2 - x1) * (i / steps), y: y1 + (y2 - y1) * (i / steps) });
+      // Dragging Wire Preview
+      if (wireStartTerminal) {
+        ctx.strokeStyle = "#38bdf8";
+        ctx.beginPath();
+        ctx.moveTo(wireStartTerminal.pos.x, wireStartTerminal.pos.y);
+        ctx.lineTo(mousePos.x, mousePos.y);
+        ctx.stroke();
       }
-      return pts;
+
+      // Render Components
+      for (let c of components) {
+        c.updateTerminals();
+
+        // Component Base Body
+        ctx.fillStyle = selectedComponent === c ? "#334155" : "#1e293b";
+        ctx.strokeStyle = selectedComponent === c ? "#38bdf8" : "#475569";
+        ctx.lineWidth = 2;
+        ctx.fillRect(c.x - 40, c.y - 20, 80, 40);
+        ctx.strokeRect(c.x - 40, c.y - 20, 80, 40);
+
+        // Render Terminals
+        ctx.fillStyle = "#ef4444"; ctx.beginPath(); ctx.arc(c.t1.x, c.t1.y, 5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#3b82f6"; ctx.beginPath(); ctx.arc(c.t2.x, c.t2.y, 5, 0, Math.PI*2); ctx.fill();
+
+        // Icon Details
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+
+        if (c.type === 'battery') {
+          ctx.fillText(`+ ${c.value}V -`, c.x, c.y + 4);
+        } else if (c.type === 'resistor') {
+          ctx.fillText(`${c.value} Ω`, c.x, c.y + 4);
+        } else if (c.type === 'switch') {
+          ctx.fillStyle = c.state ? "#10b981" : "#f43f5e";
+          ctx.fillText(c.state ? "CLOSED" : "OPEN", c.x, c.y + 4);
+        } else if (c.type === 'bulb') {
+          const glow = current > 0 ? Math.min(1, current) : 0;
+          ctx.fillStyle = current > 0 ? `rgba(253, 224, 71, ${glow})` : "#64748b";
+          ctx.beginPath(); ctx.arc(c.x, c.y, 10, 0, Math.PI*2); ctx.fill();
+        } else if (c.type === 'led') {
+          ctx.fillStyle = current > 0 ? "#f43f5e" : "#64748b";
+          ctx.fillText("LED", c.x, c.y + 4);
+        }
+      }
+
+      // Oscilloscope Render
+      scopeHistory.push(current * 15);
+      scopeHistory.shift();
+      scopeCtx.clearRect(0, 0, scopeCanvas.width, scopeCanvas.height);
+      scopeCtx.strokeStyle = "#10b981";
+      scopeCtx.lineWidth = 2;
+      scopeCtx.beginPath();
+      scopeHistory.forEach((v, i) => {
+        const x = (i / 60) * scopeCanvas.width;
+        const y = scopeCanvas.height / 2 - v;
+        if (i === 0) scopeCtx.moveTo(x, y);
+        else scopeCtx.lineTo(x, y);
+      });
+      scopeCtx.stroke();
+
+      requestAnimationFrame(render);
     }
 
-    updateMetrics();
-    draw();
+    function clearCanvas() {
+      components = [];
+      wires = [];
+      selectComp(null);
+    }
+
+    function loadPreset(type) {
+      clearCanvas();
+      if (type === 'ohms') {
+        const b = new Component('battery', 200, 300);
+        const r = new Component('resistor', 400, 200);
+        const s = new Component('switch', 400, 400); s.state = true;
+        const l = new Component('bulb', 600, 300);
+        components.push(b, r, s, l);
+
+        wires.push(
+          { from: { comp: b, term: 't1' }, to: { comp: r, term: 't1' } },
+          { from: { comp: r, term: 't2' }, to: { comp: l, term: 't1' } },
+          { from: { comp: l, term: 't2' }, to: { comp: s, term: 't2' } },
+          { from: { comp: s, term: 't1' }, to: { comp: b, term: 't2' } }
+        );
+      }
+    }
+
+    loadPreset('ohms');
+    render();
   </script>
 </body>
 </html>
